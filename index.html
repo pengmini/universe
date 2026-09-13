@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="학생 상호작용을 3D 우주로 시각화하는 학급용 프로토타입">
+<meta property="og:title" content="소통의 우주">
+<meta property="og:description" content="글을 올리면 위성이 생기고, 공감과 도움이 숨은 별로 쌓입니다.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪐</text></svg>">
+<title>소통의 우주</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* 단독 실행용 기본값 (아티팩트 환경에서는 껍데기가 제공하던 것) */
+[hidden]{display:none!important}
+img{max-width:100%}
+
+/* 우주 화면 — 뷰어 테마와 무관한 단일 다크. 모든 색을 명시적으로 칠한다. */
+:root{
+  --void:#05070F; --deep:#0A0F1E; --panel:#101729; --sunk:#0C1322;
+  --line:#1D2942; --line-2:#141E33;
+  --ink:#EDF1FA; --ink2:#9AA8C4; --ink3:#5F6C88;
+  --t1:#E8604F; --t2:#3D9AE0; --t3:#A276E8;
+  --ok:#4FCFA0; --warn:#FFC46B;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:#05070F; color:#EDF1FA;
+  font-family:"IBM Plex Sans KR","Noto Sans KR",system-ui,sans-serif;
+  font-size:14px; line-height:1.55; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.app{height:100dvh; display:flex; flex-direction:column}
+
+/* ── 상단 ── */
+.top{
+  flex:none; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:11px clamp(14px,2vw,26px); border-bottom:1px solid var(--line-2);
+  background:var(--deep);
+}
+.brand{display:flex; align-items:baseline; gap:11px; min-width:0}
+.brand h1{
+  font-family:"Jua",sans-serif; font-size:clamp(19px,2.3vw,26px);
+  margin:0; letter-spacing:.01em; color:#EDF1FA; white-space:nowrap;
+}
+.brand .sub{font-size:12px; color:var(--ink3); white-space:nowrap}
+.me{display:flex; align-items:center; gap:8px; margin-left:auto}
+.me label{font-size:12px; color:var(--ink2)}
+select, input[type=text]{
+  font:inherit; font-size:13px; color:var(--ink); background:var(--sunk);
+  border:1px solid var(--line); border-radius:8px; padding:7px 10px;
+}
+select:focus, input:focus{outline:2px solid var(--t2); outline-offset:1px}
+.btn{
+  font:inherit; font-size:13px; font-weight:500; cursor:pointer; border-radius:9px;
+  padding:8px 15px; background:var(--panel); color:var(--ink2); border:1px solid var(--line);
+}
+.btn:hover{color:var(--ink); border-color:var(--ink3)}
+.btn.on{background:#E8EDF8; color:#0A0F1E; border-color:#E8EDF8}
+.btn.sun{
+  background:linear-gradient(135deg,#FFD98A,#FFAE52); color:#2A1A00;
+  border-color:#FFD98A; font-weight:600;
+}
+.btn.sun:disabled{opacity:.35; cursor:not-allowed; filter:grayscale(.6)}
+
+/* ── 본문 ── */
+.split{flex:1; display:grid; grid-template-columns:minmax(0,1fr) 392px; min-height:0}
+.split.solo{grid-template-columns:minmax(0,1fr)}
+.split.solo .dash{display:none}
+@media (max-width:900px){
+  .split{grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(240px,44vh) minmax(0,1fr)}
+}
+
+/* ── 우주 ── */
+.space{position:relative; min-height:0; background:#05070F; overflow:hidden}
+#gl{display:block; width:100%; height:100%; cursor:grab; touch-action:none}
+#gl:active{cursor:grabbing}
+.hud{
+  position:absolute; left:14px; top:12px; display:flex; flex-direction:column; gap:7px;
+  pointer-events:none;
+}
+.hud .row{display:flex; gap:7px; flex-wrap:wrap}
+.pill{
+  font-size:11.5px; padding:4px 11px; border-radius:999px;
+  background:rgba(16,23,41,.82); border:1px solid var(--line);
+  color:var(--ink2); backdrop-filter:blur(8px);
+  display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+}
+.pill i{width:9px; height:9px; border-radius:50%; flex:none}
+.pill b{color:var(--ink); font-family:"IBM Plex Mono",monospace; font-weight:500}
+.tipbox{
+  position:absolute; pointer-events:none; z-index:5; max-width:250px;
+  background:rgba(10,15,30,.94); border:1px solid var(--line);
+  border-radius:11px; padding:9px 12px; backdrop-filter:blur(10px);
+  box-shadow:0 14px 40px rgba(0,0,0,.6);
+}
+.tipbox[hidden]{display:none!important}
+.tipbox .who{
+  font-family:"Jua",sans-serif; font-size:15px; display:block; margin-bottom:2px;
+}
+.tipbox .what{font-size:13.5px; color:var(--ink); line-height:1.45}
+.tipbox .meta{font-size:11.5px; color:var(--ink3); margin-top:5px}
+.space-foot{
+  position:absolute; right:14px; bottom:12px; display:flex; gap:8px; align-items:center;
+  flex-wrap:wrap; justify-content:flex-end; max-width:calc(100% - 28px);
+}
+.selcard{
+  background:rgba(16,23,41,.9); border:1px solid var(--line); border-radius:11px;
+  padding:8px 12px; font-size:12.5px; color:var(--ink2); backdrop-filter:blur(8px);
+}
+.selcard b{color:var(--ink); font-family:"Jua",sans-serif; font-size:14px}
+.helpbar{
+  position:absolute; left:14px; bottom:12px; font-size:11.5px; color:var(--ink3);
+  background:rgba(16,23,41,.7); border:1px solid var(--line-2); border-radius:9px;
+  padding:5px 10px; backdrop-filter:blur(6px); pointer-events:none;
+}
+
+/* ── 대시보드 ── */
+.dash{
+  border-left:1px solid var(--line-2); background:var(--deep);
+  display:flex; flex-direction:column; min-height:0;
+}
+@media (max-width:900px){ .dash{border-left:0; border-top:1px solid var(--line-2)} }
+.tabs{flex:none; display:flex; border-bottom:1px solid var(--line-2)}
+.tabs button{
+  flex:1; font:inherit; font-size:12.5px; cursor:pointer; padding:11px 6px;
+  background:none; border:0; border-bottom:2px solid transparent; color:var(--ink3);
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.tabs button i{width:22px; height:3px; border-radius:2px; display:block}
+.tabs button:hover{color:var(--ink2)}
+.tabs button[aria-selected="true"]{color:var(--ink); background:var(--panel)}
+.pane{flex:1; overflow-y:auto; padding:14px; display:none; flex-direction:column; gap:12px}
+.pane.on{display:flex}
+.pane h2{
+  font-family:"Jua",sans-serif; font-size:17px; margin:0; letter-spacing:.01em;
+}
+.pane .lede{font-size:12.5px; color:var(--ink2); margin:-6px 0 0}
+
+.compose{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.compose .row{display:flex; gap:8px}
+.compose input{flex:1; min-width:0}
+.compose .go{
+  font:inherit; font-size:13px; font-weight:600; cursor:pointer; border-radius:8px;
+  padding:8px 14px; border:0; color:#08101F; flex:none;
+}
+.compose .go:disabled{opacity:.35; cursor:not-allowed}
+
+.cards{display:flex; flex-direction:column; gap:9px}
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:10px 12px; border-left-width:3px; cursor:pointer;
+}
+.card:hover{border-color:var(--ink3)}
+.card.sel{outline:1px solid var(--ink2)}
+.card .hd{display:flex; align-items:center; gap:8px; margin-bottom:3px}
+.card .au{font-family:"Jua",sans-serif; font-size:14px}
+.card .ct{
+  margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:11px;
+  color:var(--ink3); display:inline-flex; align-items:center; gap:4px;
+}
+.card .tx{font-size:14px; color:var(--ink); line-height:1.45}
+.card .act{display:flex; gap:6px; margin-top:8px}
+.card .act button{
+  font:inherit; font-size:11.5px; cursor:pointer; border-radius:7px; padding:4px 10px;
+  background:var(--sunk); border:1px solid var(--line); color:var(--ink2);
+}
+.card .act button:hover{color:var(--ink); border-color:var(--ink3)}
+.card .act button:disabled{opacity:.35; cursor:not-allowed}
+.card .who{font-size:11px; color:var(--ink3); margin-top:6px; line-height:1.5}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:7px}
+.grid button{
+  font:inherit; font-size:13px; cursor:pointer; border-radius:10px; padding:9px 4px;
+  background:var(--panel); border:1px solid var(--line); color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.grid button:hover{border-color:var(--t3); background:#17203A}
+.grid button:disabled{opacity:.3; cursor:not-allowed}
+.grid button span{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink3);
+}
+.grid button.has span{color:var(--t3)}
+.empty{color:var(--ink3); font-size:12.5px; margin:0}
+.toast{
+  position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:20;
+  background:#1A2440; color:#EDF1FA; border:1px solid var(--line);
+  border-radius:11px; padding:10px 18px; font-size:13.5px;
+  box-shadow:0 14px 44px rgba(0,0,0,.55);
+}
+.toast[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--t2); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <h1>소통의 우주</h1>
+      <span class="sub">5학년 3반 · 프로토타입</span>
+    </div>
+    <div class="me">
+      <label for="me">나는</label>
+      <select id="me"></select>
+      <button class="btn" id="board-mode">전자칠판 모드</button>
+    </div>
+  </div>
+
+  <div class="split" id="split">
+    <div class="space">
+      <canvas id="gl"></canvas>
+      <div class="hud">
+        <div class="row" id="hud-topics"></div>
+        <div class="row">
+          <span class="pill">위성 <b id="k-sat">0</b></span>
+          <span class="pill">숨은 별 <b id="k-star">0</b></span>
+          <span class="pill">참여 <b id="k-who">0</b>/24</span>
+        </div>
+      </div>
+      <div class="tipbox" id="tip" hidden></div>
+      <div class="helpbar">드래그로 돌리고, 휠로 확대 · 위성에 올리면 숨은 별이 켜집니다</div>
+      <div class="space-foot">
+        <div class="selcard" id="selcard" hidden></div>
+        <button class="btn sun" id="sunbtn" disabled>숨은 태양 띄우기</button>
+      </div>
+    </div>
+
+    <div class="dash">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="pane on" id="pane-t1"></div>
+      <div class="pane" id="pane-t2"></div>
+      <div class="pane" id="pane-t3"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ═══════════ 데이터 ═══════════ */
+const STUDENTS = ["서연","민준","지우","하윤","도윤","예준","시우","서준","하은","지호",
+                  "수아","지안","유진","아린","건우","채원","준서","다은","현우","소율",
+                  "윤서","태윤","나윤","지훈"];
+
+const TOPICS = [
+  { id:"t1", title:"전통놀이 종류 제안", type:"board", short:"전통놀이",
+    hint:"우리가 해보고 싶은 전통놀이를 올려요",
+    css:"#E8604F", mix:["#5A1A22","#E8604F","#F0A03C","#C0304E"] },
+  { id:"t2", title:"음악 취향 인터뷰", type:"board", short:"음악 취향",
+    hint:"요즘 즐겨 듣는 음악을 알려줘요",
+    css:"#3D9AE0", mix:["#0E2B48","#3D9AE0","#45C8C0","#2A5FAE"] },
+  { id:"t3", title:"단소 도움 횟수", type:"counter", short:"단소 도움",
+    hint:"나를 도와준 친구 이름을 눌러요",
+    css:"#A276E8", mix:["#241442","#A276E8","#D46FC8","#6A4BBF"] },
+];
+
+let sats = [];        // {id, topic, student, content, acts:[{from,type}]}
+let seq = 0;
+let me = STUDENTS[0];
+let selected = null;  // 선택된 위성 id
+let hovered = null;
+
+const newSat = (topic, student, content) =>
+  ({ id:"s" + (++seq), topic, student, content, acts:[] });
+
+function seed(){
+  const P1 = [["민준","딱지치기"],["서연","제기차기"],["지우","공기놀이"],["하윤","윷놀이"],
+              ["예준","비석치기"],["수아","팽이치기"],["건우","사방치기"],["채원","고무줄놀이"],
+              ["현우","투호던지기"]];
+  const P2 = [["시우","존박"],["하은","아이유"],["지호","뉴진스"],["지안","피아노 연주곡"],
+              ["유진","할머니가 듣는 트로트"],["준서","게임 브금"],["다은","동요 메들리"],
+              ["소율","엄마 차에서 나오는 옛날 노래"]];
+  P1.forEach(([s,c]) => sats.push(newSat("t1", s, c)));
+  P2.forEach(([s,c]) => sats.push(newSat("t2", s, c)));
+  ["서준","아린","윤서","태윤","나윤"].forEach(s => sats.push(newSat("t3", s, "0")));
+
+  // 초기 상호작용 — 실제 수업이 조금 진행된 상태로 연다
+  const rnd = (() => { let x = 987; return () => (x = (x*1664525+1013904223)>>>0)/4294967296; })();
+  sats.forEach(sa => {
+    const n = Math.floor(rnd() * (sa.topic === "t3" ? 7 : 5));
+    const pool = STUDENTS.filter(s => s !== sa.student);
+    for (let i = 0; i < n; i++){
+      const from = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+      if (!from) break;
+      sa.acts.push({ from, type: sa.topic === "t3" ? "help" : (rnd() < .45 ? "comment" : "like") });
+    }
+    if (sa.topic === "t3") sa.content = String(sa.acts.length);
+  });
+}
+seed();
+
+const topicOf = id => TOPICS.find(t => t.id === id);
+const satById = id => sats.find(s => s.id === id);
+
+/* ═══════════ 3D 우주 ═══════════ */
+const cv = $("gl");
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
+renderer.setClearColor(0x05070F, 1);
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05070F, 0.0042);
+const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 900);
+
+scene.add(new THREE.AmbientLight(0x6a7ba8, 0.85));
+const key = new THREE.PointLight(0xfff2dc, 1.55, 0, 2);
+key.position.set(70, 90, 60); scene.add(key);
+const fill = new THREE.PointLight(0x5f8fd0, .55, 0, 2);
+fill.position.set(-90, -50, -70); scene.add(fill);
+
+/* 캔버스로 만드는 텍스처들 — 외부 이미지를 받지 않는다 */
+function marbleTex(mix, size = 512){
+  const c = document.createElement("canvas");
+  c.width = size; c.height = size / 2;
+  const x = c.getContext("2d");
+  x.fillStyle = mix[0]; x.fillRect(0, 0, c.width, c.height);
+  for (let i = 0; i < 120; i++){
+    const col = mix[1 + Math.floor(Math.random() * (mix.length - 1))];
+    const px = Math.random() * c.width, py = Math.random() * c.height;
+    const r = 26 + Math.random() * 120;
+    const g = x.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, col + "D9"); g.addColorStop(.55, col + "6E"); g.addColorStop(1, col + "00");
+    x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, 6.284); x.fill();
+  }
+  // 극지방 띠 — 구에 감쌀 때 오로라처럼 보인다
+  for (const [yy, a] of [[0, .22], [c.height, .22]]){
+    const g = x.createLinearGradient(0, yy, 0, yy + (yy ? -70 : 70));
+    g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = g; x.fillRect(0, Math.min(yy, yy - 70), c.width, 70);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+function glowTex(){
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(.2, "rgba(255,255,255,.55)");
+  g.addColorStop(.5, "rgba(255,255,255,.15)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const GLOW = glowTex();
+const mkGlow = (color, scale, opacity) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: GLOW, color, transparent: true, opacity,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  s.scale.set(scale, scale, 1);
+  return s;
+};
+
+/* 배경 별 */
+(() => {
+  const n = 1400, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++){
+    const r = 220 + Math.random() * 320;
+    const th = Math.random() * 6.284, ph = Math.acos(2 * Math.random() - 1);
+    pos[i*3]   = r * Math.sin(ph) * Math.cos(th);
+    pos[i*3+1] = r * Math.cos(ph);
+    pos[i*3+2] = r * Math.sin(ph) * Math.sin(th);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({
+    size: 1.5, color: 0xAFC4E6, sizeAttenuation: true,
+    transparent: true, opacity: .75, map: GLOW, depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })));
+})();
+
+/* ── 주제 행성 ── */
+const PLANET_AT = [new THREE.Vector3(-34, 6, 8),
+                   new THREE.Vector3(30, -4, -20),
+                   new THREE.Vector3(6, 12, 34)];
+TOPICS.forEach((t, i) => {
+  const g = new THREE.Group();
+  g.position.copy(PLANET_AT[i]);
+  const col = new THREE.Color(t.css);
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 48, 40),
+    new THREE.MeshStandardMaterial({
+      map: marbleTex(t.mix), roughness: .62, metalness: .12,
+      emissive: col.clone().multiplyScalar(.16),
+    })
+  );
+  g.add(mesh);
+  const halo = mkGlow(col, 1, .55);      // 자체 발광
+  g.add(halo);
+  scene.add(g);
+  t._g = g; t._mesh = mesh; t._halo = halo; t._col = col;
+  t._spin = 0.0013 + i * 0.0004;
+});
+
+/* ── 위성 · 숨은 별 ── */
+const satMeshes = [];
+function buildSats(){
+  satMeshes.length = 0;
+  TOPICS.forEach(t => {
+    [...t._g.children].forEach(ch => { if (ch.userData.sat || ch.userData.star) t._g.remove(ch); });
+  });
+  sats.forEach((sa, idx) => {
+    const t = topicOf(sa.topic);
+    const col = t._col.clone().offsetHSL((((idx * 37) % 21) - 10) / 260, 0, .06);
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 22, 18),
+      new THREE.MeshStandardMaterial({
+        map: marbleTex(t.mix, 128), roughness: .5, metalness: .1,
+        emissive: col.clone().multiplyScalar(.3),
+      })
+    );
+    m.userData = { sat: sa.id };
+    const halo = mkGlow(col, 1, .5); halo.userData.sat = sa.id;
+    m.add(halo);
+    t._g.add(m);
+    // 궤도 — 위성마다 반지름·기울기·위상·속도가 다르다
+    const h = (idx * 2654435761) >>> 0;
+    sa._o = {
+      r: 9 + (h % 1000) / 1000 * 11,
+      incl: ((h >> 10) % 1000) / 1000 * 1.25 - .62,
+      node: ((h >> 20) % 1000) / 1000 * 6.283,
+      phase: ((h >> 5) % 997) / 997 * 6.283,
+      base: 0.00022 + ((h >> 15) % 500) / 500 * 0.00042,
+    };
+    sa._m = m; sa._halo = halo; sa._col = col;
+    satMeshes.push(m);
+    buildStars(sa, t);
+  });
+}
+function buildStars(sa, t){
+  sa._stars = [];
+  sa.acts.forEach((a, k) => {
+    const s = mkGlow(0xE8F0FF, 1, .16);
+    s.userData.star = true;
+    const h = ((k + 1) * 2246822519 + sa.id.length * 97) >>> 0;
+    s.userData.off = new THREE.Vector3(
+      ((h % 1000) / 1000 - .5) * 5.4,
+      (((h >> 10) % 1000) / 1000 - .5) * 5.4,
+      (((h >> 20) % 1000) / 1000 - .5) * 5.4
+    );
+    s.userData.from = a.from;
+    s.userData.sun = 0;
+    t._g.add(s);
+    sa._stars.push(s);
+  });
+}
+buildSats();
+
+/* ── 숨은 태양 연결선 ── */
+let sunLines = [], sunOf = null, sunT = 0;
+function clearSuns(){
+  sunLines.forEach(l => scene.remove(l)); sunLines = [];
+  sats.forEach(sa => (sa._stars || []).forEach(s => { s.userData.sun = 0; }));
+  sunOf = null; sunT = 0;
+}
+function fireSuns(){
+  const sa = satById(selected); if (!sa || !sa._stars.length) return;
+  clearSuns();
+  const pool = sa._stars.slice();
+  const pick = [];
+  while (pick.length < Math.min(3, pool.length))
+    pick.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  pick.forEach(s => { s.userData.sun = 0.0001; });
+  sunOf = sa.id; sunT = 0;
+  pick.forEach(s => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
+      color: 0xFFD98A, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
+    }));
+    line.userData = { star: s, sat: sa };
+    scene.add(line); sunLines.push(line);
+  });
+  toast(`${sa.student}의 숨은 태양 ${pick.length}개가 떠오릅니다`);
+}
+
+/* ── 카메라 조작 ── */
+let camR = 118, camTh = .7, camPh = 1.16, drag = null, idle = 0;
+function placeCam(){
+  camera.position.set(
+    camR * Math.sin(camPh) * Math.sin(camTh),
+    camR * Math.cos(camPh),
+    camR * Math.sin(camPh) * Math.cos(camTh)
+  );
+  camera.lookAt(0, 0, 0);
+}
+cv.addEventListener("pointerdown", e => {
+  drag = { x:e.clientX, y:e.clientY, th:camTh, ph:camPh, moved:false };
+  cv.setPointerCapture(e.pointerId); idle = 0;
+});
+cv.addEventListener("pointermove", e => {
+  if (drag){
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    camTh = drag.th - dx * .006;
+    camPh = Math.max(.22, Math.min(2.92, drag.ph - dy * .006));
+    idle = 0;
+  }
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.live = true;
+});
+cv.addEventListener("pointerup", e => {
+  if (drag && !drag.moved) pickAt(e.clientX, e.clientY);
+  drag = null; try { cv.releasePointerCapture(e.pointerId); } catch(_){}
+});
+cv.addEventListener("pointerleave", () => { pointer.live = false; hovered = null; });
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  camR = Math.max(42, Math.min(260, camR + e.deltaY * .06)); idle = 0;
+}, { passive:false });
+
+/* ── 피킹 ── */
+const ray = new THREE.Raycaster();
+const pointer = { x:0, y:0, live:false };
+function ndc(cx, cy){
+  const r = cv.getBoundingClientRect();
+  return new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+}
+function hitAt(cx, cy){
+  ray.setFromCamera(ndc(cx, cy), camera);
+  const hits = ray.intersectObjects(satMeshes, false);
+  return hits.length ? hits[0].object.userData.sat : null;
+}
+function pickAt(cx, cy){
+  const id = hitAt(cx, cy);
+  selected = id === selected ? null : id;
+  clearSuns(); syncSel(); renderPanes();
+}
+
+/* ═══════════ 루프 ═══════════ */
+let last = performance.now(), tGlobal = 0;
+function frame(now){
+  const dt = Math.min(50, now - last); last = now;
+  tGlobal += dt;
+  idle += dt;
+  if (idle > 2600 && !drag) camTh += dt * .000035;   // 손을 떼면 천천히 돈다
+  placeCam();
+
+  // 주제 행성 — 위성이 늘수록 커지고 밝아진다
+  TOPICS.forEach(t => {
+    const n = sats.filter(s => s.topic === t.id).length;
+    const R = 7.2 + Math.sqrt(n) * 1.5;
+    t._mesh.scale.setScalar(R);
+    t._mesh.rotation.y += t._spin * dt * .06;
+    t._halo.scale.setScalar(R * 3.5);
+    t._halo.material.opacity = .34 + Math.min(n, 14) * .016;
+    t._mesh.material.emissiveIntensity = 1 + Math.min(n, 14) * .04;
+  });
+
+  // 위성 — 상호작용이 많을수록 크고 밝고 조금 빠르다
+  const hoverSat = hovered ? satById(hovered) : null;
+  sats.forEach(sa => {
+    const o = sa._o, k = sa.acts.length;
+    const spd = o.base * (1 + Math.min(k, 12) * .06);
+    const a = o.phase + tGlobal * spd;
+    const x = Math.cos(a) * o.r, z = Math.sin(a) * o.r;
+    const ci = Math.cos(o.incl), si = Math.sin(o.incl);
+    const cn = Math.cos(o.node), sn = Math.sin(o.node);
+    const y2 = -z * si, z2 = z * ci;
+    sa._m.position.set(x * cn - z2 * sn, y2, x * sn + z2 * cn);
+    sa._m.rotation.y += dt * .0006;
+
+    const r = 1.15 + Math.sqrt(k) * .42;
+    sa._m.scale.setScalar(r);
+    const lit = (hovered === sa.id ? 1 : 0) + (selected === sa.id ? .7 : 0);
+    sa._halo.scale.setScalar(3.6 + lit * 2.2);
+    sa._halo.material.opacity = .34 + Math.min(k, 12) * .028 + lit * .3;
+    sa._m.material.emissiveIntensity = 1 + Math.min(k, 12) * .07 + lit * 1.2;
+
+    // 숨은 별 — 평소엔 거의 안 보이고, 위성에 올리면 켜진다
+    const on = (hovered === sa.id || selected === sa.id);
+    (sa._stars || []).forEach(s => {
+      s.position.copy(sa._m.position).add(s.userData.off);
+      const isSun = s.userData.sun > 0;
+      if (isSun) s.userData.sun = Math.min(1, s.userData.sun + dt / 900);
+      const want = isSun ? 1 : (on ? .92 : .14);
+      s.material.opacity += (want - s.material.opacity) * .14;
+      const sc = isSun ? 3.2 + 9 * s.userData.sun : (on ? 2.5 : 1.5);
+      const cur = s.scale.x + (sc - s.scale.x) * .15;
+      s.scale.set(cur, cur, 1);
+      s.material.color.setHex(isSun ? 0xFFD98A : 0xE8F0FF);
+    });
+  });
+
+  // 태양 연결선
+  if (sunOf){
+    sunT += dt;
+    const sa = satById(sunOf);
+    sunLines.forEach(l => {
+      const p = l.userData.sat._m.getWorldPosition(new THREE.Vector3());
+      const q = l.userData.star.getWorldPosition(new THREE.Vector3());
+      const arr = l.geometry.attributes.position.array;
+      arr[0]=p.x; arr[1]=p.y; arr[2]=p.z; arr[3]=q.x; arr[4]=q.y; arr[5]=q.z;
+      l.geometry.attributes.position.needsUpdate = true;
+      l.material.opacity = Math.min(.85, sunT / 700);
+    });
+    if (sa) void sa;
+  }
+
+  // 호버
+  if (pointer.live && !drag){
+    const id = hitAt(pointer.x, pointer.y);
+    if (id !== hovered){ hovered = id; }
+  }
+  drawTip();
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+function drawTip(){
+  const tip = $("tip");
+  const sa = hovered ? satById(hovered) : null;
+  if (!sa){ tip.hidden = true; return; }
+  const t = topicOf(sa.topic);
+  const p = sa._m.getWorldPosition(new THREE.Vector3()).project(camera);
+  const r = cv.getBoundingClientRect();
+  const sx = (p.x * .5 + .5) * r.width, sy = (-p.y * .5 + .5) * r.height;
+  tip.hidden = false;
+  const label = sa.topic === "t3" ? `${sa.content}회 도움받음` : `“${sa.content}”`;
+  tip.innerHTML =
+    `<b class="who" style="color:${t.css}">${sa.student}</b>` +
+    `<div class="what">${label}</div>` +
+    `<div class="meta">${t.short} · 상호작용 ${sa.acts.length}회` +
+    (sa.acts.length ? ` · ${sa.acts.map(a => a.from).slice(0,6).join(", ")}` +
+      (sa.acts.length > 6 ? " 외" : "") : "") + `</div>`;
+  const tw = tip.offsetWidth || 220, th = tip.offsetHeight || 70;
+  tip.style.left = Math.max(8, Math.min(r.width - tw - 8, sx + 16)) + "px";
+  tip.style.top  = Math.max(8, Math.min(r.height - th - 8, sy + 14)) + "px";
+}
+
+function resize(){
+  const r = cv.parentElement.getBoundingClientRect();
+  const w = Math.max(240, r.width), h = Math.max(200, r.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+
+/* ═══════════ 대시보드 ═══════════ */
+function renderTabs(){
+  $("tabs").innerHTML = TOPICS.map((t, i) =>
+    `<button role="tab" data-t="${t.id}" aria-selected="${i === 0}">
+       <i style="background:${t.css}"></i>${t.short}</button>`).join("");
+}
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-t]"); if (!b) return;
+  TOPICS.forEach(t => {
+    const on = t.id === b.dataset.t;
+    $("tabs").querySelector(`[data-t="${t.id}"]`).setAttribute("aria-selected", String(on));
+    $("pane-" + t.id).classList.toggle("on", on);
+  });
+});
+
+function renderPanes(){
+  TOPICS.forEach(t => {
+    const box = $("pane-" + t.id);
+    const mine = sats.filter(s => s.topic === t.id);
+    if (t.type === "board"){
+      const already = mine.some(s => s.student === me);
+      box.innerHTML = `
+        <h2 style="color:${t.css}">${t.title}</h2>
+        <p class="lede">${t.hint}</p>
+        <div class="compose">
+          <div class="row">
+            <input type="text" id="in-${t.id}" maxlength="40"
+                   placeholder="${t.id === "t1" ? "예) 딱지치기" : "예) 아이유"}"
+                   ${already ? "disabled" : ""}>
+            <button class="go" data-post="${t.id}" style="background:${t.css}"
+                    ${already ? "disabled" : ""}>올리기</button>
+          </div>
+          ${already ? `<p class="empty">이미 글을 올렸어요. 친구 글에 공감이나 댓글을 남겨보세요.</p>` : ""}
+        </div>
+        <div class="cards">${mine.map(s => cardHTML(s, t)).join("") ||
+          '<p class="empty">아직 올라온 글이 없어요.</p>'}</div>`;
+    } else {
+      const counts = {};
+      sats.filter(s => s.topic === "t3").forEach(s => (counts[s.student] = s.acts.length));
+      box.innerHTML = `
+        <h2 style="color:${t.css}">${t.title}</h2>
+        <p class="lede">${t.hint} · 누를 때마다 그 친구의 숨은 별이 하나 늘어요</p>
+        <div class="grid">${STUDENTS.map(s => `
+          <button data-help="${s}" ${s === me ? "disabled" : ""}
+                  class="${counts[s] ? "has" : ""}">
+            ${s}<span>${counts[s] ? counts[s] + "회" : "—"}</span>
+          </button>`).join("")}</div>
+        <p class="lede" style="margin-top:4px">내가 누른 친구: ${
+          sats.filter(s => s.topic === "t3" && s.acts.some(a => a.from === me))
+              .map(s => s.student).join(", ") || "아직 없어요"}</p>`;
+    }
+  });
+}
+function cardHTML(s, t){
+  const did = s.acts.some(a => a.from === me);
+  const mineOwn = s.student === me;
+  return `<div class="card ${selected === s.id ? "sel" : ""}" data-sat="${s.id}"
+               style="border-left-color:${t.css}">
+    <div class="hd"><span class="au" style="color:${t.css}">${s.student}</span>
+      <span class="ct">★ ${s.acts.length}</span></div>
+    <div class="tx">${esc(s.content)}</div>
+    <div class="act">
+      <button data-act="like" data-id="${s.id}" ${did || mineOwn ? "disabled" : ""}>공감</button>
+      <button data-act="comment" data-id="${s.id}" ${did || mineOwn ? "disabled" : ""}>댓글</button>
+    </div>
+    ${s.acts.length ? `<div class="who">${s.acts.map(a => a.from).join(" · ")}</div>` : ""}
+  </div>`;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+document.addEventListener("click", e => {
+  const post = e.target.closest("[data-post]");
+  if (post){
+    const t = post.dataset.post, inp = $("in-" + t);
+    const v = inp.value.trim(); if (!v) return;
+    const sa = newSat(t, me, v);
+    sats.push(sa); buildSats(); selected = sa.id;
+    clearSuns(); renderPanes(); syncSel(); stats();
+    toast(`${me}의 위성이 ${topicOf(t).short} 행성에 생겼어요`);
+    return;
+  }
+  const act = e.target.closest("[data-act]");
+  if (act){
+    const sa = satById(act.dataset.id); if (!sa) return;
+    sa.acts.push({ from: me, type: act.dataset.act });
+    buildSats(); clearSuns(); renderPanes(); stats();
+    toast(`${sa.student}의 위성 주변에 숨은 별이 하나 생겼어요`);
+    return;
+  }
+  const help = e.target.closest("[data-help]");
+  if (help){
+    const name = help.dataset.help;
+    let sa = sats.find(s => s.topic === "t3" && s.student === name);
+    if (!sa){ sa = newSat("t3", name, "0"); sats.push(sa); }
+    sa.acts.push({ from: me, type: "help" });
+    sa.content = String(sa.acts.length);
+    buildSats(); clearSuns(); renderPanes(); stats();
+    toast(`${name}에게 고마움을 전했어요`);
+    return;
+  }
+  const card = e.target.closest("[data-sat]");
+  if (card && !e.target.closest("[data-act]")){
+    selected = selected === card.dataset.sat ? null : card.dataset.sat;
+    clearSuns(); syncSel(); renderPanes();
+  }
+});
+
+function syncSel(){
+  const sa = selected ? satById(selected) : null;
+  const box = $("selcard"), btn = $("sunbtn");
+  if (!sa){ box.hidden = true; btn.disabled = true; return; }
+  const t = topicOf(sa.topic);
+  box.hidden = false;
+  box.innerHTML = `선택 <b style="color:${t.css}">${sa.student}</b> · 숨은 별 ${sa.acts.length}개`;
+  btn.disabled = sa.acts.length === 0;
+}
+$("sunbtn").addEventListener("click", fireSuns);
+
+function stats(){
+  $("k-sat").textContent = sats.length;
+  $("k-star").textContent = sats.reduce((a, s) => a + s.acts.length, 0);
+  const who = new Set();
+  sats.forEach(s => { who.add(s.student); s.acts.forEach(a => who.add(a.from)); });
+  $("k-who").textContent = who.size;
+  $("hud-topics").innerHTML = TOPICS.map(t => {
+    const n = sats.filter(s => s.topic === t.id).length;
+    const k = sats.filter(s => s.topic === t.id).reduce((a, s) => a + s.acts.length, 0);
+    return `<span class="pill"><i style="background:${t.css}"></i>${t.short}
+      <b>${n}</b>위성 <b>${k}</b>별</span>`;
+  }).join("");
+}
+
+let toastT = null;
+function toast(msg){
+  clearTimeout(toastT);
+  $("toast").textContent = msg; $("toast").hidden = false;
+  toastT = setTimeout(() => { $("toast").hidden = true; }, 2400);
+}
+
+/* ═══════════ 시작 ═══════════ */
+$("me").innerHTML = STUDENTS.map(s => `<option>${s}</option>`).join("");
+$("me").addEventListener("change", e => { me = e.target.value; renderPanes(); });
+$("board-mode").addEventListener("click", () => {
+  const on = $("split").classList.toggle("solo");
+  $("board-mode").classList.toggle("on", on);
+  $("board-mode").textContent = on ? "대시보드 열기" : "전자칠판 모드";
+  setTimeout(resize, 60);
+});
+
+renderTabs(); renderPanes(); syncSel(); stats();
+resize(); placeCam();
+new ResizeObserver(resize).observe(cv.parentElement);
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
