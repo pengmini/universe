@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>소통의 우주 — 내 응답</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✍️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="./app/ui.css">
+<style>
+  body{display:flex; flex-direction:column; min-height:100dvh}
+  .top{
+    flex:none; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:11px clamp(14px,3vw,28px); border-bottom:1px solid var(--line-2);
+    background:var(--deep); position:sticky; top:0; z-index:10;
+  }
+  .top h1{font-size:clamp(18px,3vw,23px); margin:0; white-space:nowrap}
+  .wrap{width:min(720px,100%); margin:0 auto; padding:18px clamp(14px,3vw,28px) 56px; flex:1}
+
+  .tabs{display:flex; gap:8px; margin-bottom:18px}
+  .tabs button{
+    flex:1; padding:11px 8px; border-radius:11px; font-size:14px; font-weight:500;
+    background:var(--panel); border:1px solid var(--line); color:var(--ink2);
+    display:flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .tabs button i{width:9px; height:9px; border-radius:50%; flex:none}
+  .tabs button[aria-selected="true"]{color:var(--ink); border-color:var(--ink3); background:#17203A}
+
+  .pane{display:none; flex-direction:column; gap:14px}
+  .pane.on{display:flex}
+  .pane > h2{font-size:20px; margin:0}
+  .lede{color:var(--ink2); font-size:13px; margin:-8px 0 0}
+
+  .compose{
+    background:var(--panel); border:1px solid var(--line); border-radius:13px; padding:13px;
+    display:flex; flex-direction:column; gap:9px;
+  }
+  .compose .row{display:flex; gap:8px}
+  .compose input{flex:1; min-width:0; font-size:15px; padding:11px 13px}
+  .compose .go{
+    flex:none; border:0; border-radius:9px; padding:11px 20px;
+    font-size:14px; font-weight:600; color:#0B1120;
+  }
+  .compose .go:disabled{opacity:.35; cursor:not-allowed}
+  .done{
+    display:flex; align-items:center; gap:9px; font-size:13px; color:var(--ok);
+    background:rgba(79,207,160,.08); border:1px solid rgba(79,207,160,.28);
+    border-radius:11px; padding:11px 13px;
+  }
+
+  .cards{display:flex; flex-direction:column; gap:10px}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-left-width:3px;
+    border-radius:13px; padding:12px 14px;
+  }
+  .card.me{border-color:var(--ink3); border-left-color:inherit; background:#141D33}
+  .card .hd{display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap}
+  .card .au{font-family:"Jua",sans-serif; font-size:15px}
+  .card .tag{
+    font-size:10.5px; padding:2px 8px; border-radius:999px; color:var(--ink3);
+    border:1px solid var(--line);
+  }
+  .card .ct{margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink3)}
+  .card .tx{font-size:16px; line-height:1.45}
+  .card .act{display:flex; gap:7px; margin-top:10px}
+  .card .act button{
+    font-size:13px; border-radius:9px; padding:7px 15px;
+    background:var(--sunk); border:1px solid var(--line); color:var(--ink2);
+  }
+  .card .act button:hover:not(:disabled){color:var(--ink); border-color:var(--ink3)}
+  .card .cbox{display:flex; gap:7px; margin-top:9px}
+  .card .cbox input{flex:1; min-width:0; font-size:14px}
+  .card .cbox button{
+    flex:none; border:0; border-radius:8px; padding:8px 15px;
+    background:#FFC98A; color:#2A1A00; font-size:13px; font-weight:600;
+  }
+  .card .notes{display:flex; flex-direction:column; gap:5px; margin-top:10px}
+  .card .notes div{
+    font-size:13.5px; background:rgba(255,201,138,.09); border-left:2px solid #FFC98A;
+    border-radius:0 8px 8px 0; padding:6px 11px; line-height:1.45;
+  }
+  .card .notes b{color:#FFC98A; margin-right:7px}
+  .card .likes{font-size:11.5px; color:var(--ink3); margin-top:8px; line-height:1.5}
+  .empty{color:var(--ink3); font-size:13px; margin:0; text-align:center; padding:22px 0}
+
+  .sum{
+    display:flex; gap:9px; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .sum span{
+    font-size:12px; padding:5px 12px; border-radius:999px;
+    background:var(--panel); border:1px solid var(--line); color:var(--ink2);
+  }
+  .sum b{color:var(--ink); font-family:"IBM Plex Mono",monospace}
+  .toast{
+    position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:30;
+    background:#1A2440; border:1px solid var(--line); border-radius:11px;
+    padding:11px 20px; font-size:14px; box-shadow:0 14px 44px rgba(0,0,0,.6);
+  }
+</style>
+</head>
+<body>
+<div class="veil" id="veil"><div class="box"><div class="spin"></div><p>불러오는 중…</p></div></div>
+
+<div class="top">
+  <h1>내 응답</h1>
+  <div class="account" id="account"></div>
+</div>
+
+<main class="wrap" id="wrap" hidden>
+  <div class="sum" id="sum"></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="panes"></div>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module">
+import { guard, mountAccount } from "./app/auth.js";
+import { TOPICS } from "./app/config.js";
+import { watchAll, postSatellite, addInteraction, satId, friendlyError } from "./app/data.js";
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LIVE = TOPICS.filter(t => t.active);     // 단소는 active:false 라 여기서 빠진다
+
+let me = null, sats = [], tab = LIVE[0]?.id || null, busy = false;
+
+let toastT = null;
+function toast(msg){
+  clearTimeout(toastT);
+  $("toast").textContent = msg; $("toast").hidden = false;
+  toastT = setTimeout(() => { $("toast").hidden = true; }, 2400);
+}
+
+guard("student", user => {
+  me = user;
+  mountAccount($("account"), user);
+  $("veil").hidden = true; $("wrap").hidden = false;
+  renderTabs();
+  watchAll(next => { sats = next; render(); },
+           () => toast("데이터를 불러오지 못했어요. 새로고침해 주세요."));
+});
+
+function renderTabs(){
+  $("tabs").innerHTML = LIVE.map(t =>
+    `<button role="tab" data-t="${t.id}" aria-selected="${tab === t.id}">
+       <i style="background:${t.css}"></i>${t.short}</button>`).join("");
+  $("panes").innerHTML = LIVE.map(t => `<div class="pane" id="p-${t.id}"></div>`).join("");
+}
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-t]"); if (!b) return;
+  tab = b.dataset.t; renderTabs(); render();
+});
+
+const likes = s => s.acts.filter(a => a.type !== "comment");
+const notes = s => s.acts.filter(a => a.type === "comment");
+
+function render(){
+  const all = sats.filter(s => LIVE.some(t => t.id === s.topic));
+  $("sum").innerHTML =
+    `<span>우리 반 글 <b>${all.length}</b></span>` +
+    `<span>공감 <b>${all.reduce((a, s) => a + likes(s).length, 0)}</b></span>` +
+    `<span>댓글 <b>${all.reduce((a, s) => a + notes(s).length, 0)}</b></span>`;
+
+  LIVE.forEach(t => {
+    const pane = $("p-" + t.id);
+    pane.classList.toggle("on", tab === t.id);
+    const list = sats.filter(s => s.topic === t.id);
+    const mineSat = list.find(s => s.uid === me.uid);
+    pane.innerHTML = `
+      <h2 style="color:${t.css}">${t.title}</h2>
+      <p class="lede">${t.hint}</p>
+      ${mineSat ? `<div class="done">✓ 내 글을 올렸어요 — “${esc(mineSat.content)}”</div>` : `
+      <div class="compose">
+        <div class="row">
+          <input type="text" id="in-${t.id}" maxlength="40" placeholder="${t.placeholder}"
+                 autocomplete="off">
+          <button class="go" data-post="${t.id}" style="background:${t.css}">올리기</button>
+        </div>
+        <p class="lede" style="margin:0">한 주제에 한 번만 올릴 수 있어요.</p>
+      </div>`}
+      <div class="cards">${
+        list.length ? list.map(s => card(s, t)).join("")
+                    : '<p class="empty">아직 올라온 글이 없어요. 먼저 올려볼까요?</p>'}</div>`;
+  });
+}
+
+function card(s, t){
+  // 상호작용 문서 ID가 결정론적이라, 내가 했는지는 ID만 보면 된다
+  const iLiked = s.acts.some(a => a.id === `${s.id}__${me.uid}__like`);
+  const iNoted = s.acts.some(a => a.id === `${s.id}__${me.uid}__comment`);
+  const own = s.uid === me.uid;
+  const ns = notes(s), ls = likes(s);
+  return `<div class="card ${own ? "me" : ""}" style="border-left-color:${t.css}">
+    <div class="hd">
+      <span class="au" style="color:${t.css}">${esc(s.student)}</span>
+      ${own ? '<span class="tag">내 글</span>' : ""}
+      <span class="ct">공감 ${ls.length} · 댓글 ${ns.length}</span>
+    </div>
+    <div class="tx">${esc(s.content)}</div>
+    <div class="act">
+      <button data-like="${s.id}" ${iLiked || own ? "disabled" : ""}>${iLiked ? "공감함" : "공감"}</button>
+      <button data-open="${s.id}" ${iNoted || own ? "disabled" : ""}>${iNoted ? "댓글 남김" : "댓글 쓰기"}</button>
+    </div>
+    <div class="cbox" id="cb-${s.id}" hidden>
+      <input type="text" id="ci-${s.id}" maxlength="40" placeholder="댓글을 한 줄로 써 주세요" autocomplete="off">
+      <button data-send="${s.id}">등록</button>
+    </div>
+    ${ns.length ? `<div class="notes">${ns.map(a =>
+        `<div><b>${esc(a.from)}</b>${esc(a.text)}</div>`).join("")}</div>` : ""}
+    ${ls.length ? `<div class="likes">공감 · ${ls.map(a => esc(a.from)).join(" · ")}</div>` : ""}
+  </div>`;
+}
+
+document.addEventListener("click", async e => {
+  if (busy) return;
+  const post = e.target.closest("[data-post]");
+  if (post){
+    const t = post.dataset.post, v = $("in-" + t).value.trim();
+    if (!v){ toast("내용을 써 주세요"); return; }
+    await run(() => postSatellite({ topicId:t, user:me, content:v }), "글을 올렸어요!");
+    return;
+  }
+  const open = e.target.closest("[data-open]");
+  if (open){
+    const box = $("cb-" + open.dataset.open);
+    if (box){ box.hidden = !box.hidden; if (!box.hidden) $("ci-" + open.dataset.open).focus(); }
+    return;
+  }
+  const like = e.target.closest("[data-like]");
+  if (like){
+    const s = sats.find(x => x.id === like.dataset.like); if (!s) return;
+    await run(() => addInteraction({ satelliteId:s.id, topicId:s.topic, user:me, type:"like" }),
+              "공감했어요!");
+    return;
+  }
+  const send = e.target.closest("[data-send]");
+  if (send){
+    const id = send.dataset.send, s = sats.find(x => x.id === id), inp = $("ci-" + id);
+    if (!s || !inp) return;
+    const v = inp.value.trim();
+    if (!v){ toast("댓글 내용을 써 주세요"); return; }
+    await run(() => addInteraction({ satelliteId:s.id, topicId:s.topic, user:me,
+                                     type:"comment", text:v }), "댓글을 남겼어요!");
+    return;
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const t = e.target;
+  if (t.id?.startsWith("ci-")) document.querySelector(`[data-send="${t.id.slice(3)}"]`)?.click();
+  else if (t.id?.startsWith("in-")) document.querySelector(`[data-post="${t.id.slice(3)}"]`)?.click();
+});
+
+async function run(fn, okMsg){
+  busy = true;
+  try { await fn(); toast(okMsg); }
+  catch (err){ console.error(err); toast(friendlyError(err)); }
+  finally { busy = false; }
+}
+</script>
+</body>
+</html>
