@@ -225,18 +225,6 @@ select:focus, input:focus{outline:2px solid var(--t2); outline-offset:1px}
 .card .notes b{color:#FFC98A; font-weight:600; margin-right:6px}
 .card .who{font-size:11px; color:var(--ink3); margin-top:6px; line-height:1.5}
 
-.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:7px}
-.grid button{
-  font:inherit; font-size:13px; cursor:pointer; border-radius:10px; padding:9px 4px;
-  background:var(--panel); border:1px solid var(--line); color:var(--ink);
-  display:flex; flex-direction:column; align-items:center; gap:2px;
-}
-.grid button:hover{border-color:var(--t3); background:#17203A}
-.grid button:disabled{opacity:.3; cursor:not-allowed}
-.grid button span{
-  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink3);
-}
-.grid button.has span{color:var(--t3)}
 .empty{color:var(--ink3); font-size:12.5px; margin:0}
 .toast{
   position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:20;
@@ -859,7 +847,9 @@ function drawTip(){
   const p = sa._m.getWorldPosition(new THREE.Vector3()).project(camera);
   tip.hidden = false;
   // 단소 도움 행성에서 위성은 '도움을 준 친구'다. 주변의 숨은 별이 도움을 받은 친구.
-  const label = sa.topic === "t3" ? `${sa.content}회 도움을 줌` : `“${sa.content}”`;
+  // sa.content 는 위성을 만들 때 한 번 굳는 값이라(수정 불가) 실시간 누적에 못 쓴다.
+  // nLike(sa) 는 매 스냅샷마다 실제 상호작용 수를 다시 세므로 항상 최신값이다.
+  const label = sa.topic === "t3" ? `${nLike(sa)}회 도움을 줌` : `“${sa.content}”`;
   tip.innerHTML =
     `<b class="who" style="color:${t.css}">${sa.student}</b>` +
     `<div class="what">${label}</div>` +

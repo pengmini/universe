@@ -118,8 +118,8 @@
 
 <script type="module">
 import { guard, mountAccount } from "./app/auth.js";
-import { TOPICS } from "./app/config.js";
-import { watchAll, postSatellite, addInteraction, satId, friendlyError } from "./app/data.js";
+import { TOPICS, ROSTER } from "./app/config.js";
+import { watchAll, postSatellite, addInteraction, creditHelper, actId, friendlyError } from "./app/data.js";
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -168,23 +168,44 @@ function render(){
     const pane = $("p-" + t.id);
     pane.classList.toggle("on", tab === t.id);
     const list = sats.filter(s => s.topic === t.id);
-    const mineSat = list.find(s => s.uid === me.uid);
-    pane.innerHTML = `
-      <h2 style="color:${t.css}">${t.title}</h2>
-      <p class="lede">${t.hint}</p>
-      ${mineSat ? `<div class="done">✓ 내 글을 올렸어요 — “${esc(mineSat.content)}”</div>` : `
-      <div class="compose">
-        <div class="row">
-          <input type="text" id="in-${t.id}" maxlength="40" placeholder="${t.placeholder}"
-                 autocomplete="off">
-          <button class="go" data-post="${t.id}" style="background:${t.css}">올리기</button>
-        </div>
-        <p class="lede" style="margin:0">한 주제에 한 번만 올릴 수 있어요.</p>
-      </div>`}
-      <div class="cards">${
-        list.length ? list.map(s => card(s, t)).join("")
-                    : '<p class="empty">아직 올라온 글이 없어요. 먼저 올려볼까요?</p>'}</div>`;
+    pane.innerHTML = t.type === "counter" ? counterPane(list, t) : boardPane(list, t);
   });
+}
+
+function boardPane(list, t){
+  const mineSat = list.find(s => s.uid === me.uid);
+  return `
+    <h2 style="color:${t.css}">${t.title}</h2>
+    <p class="lede">${t.hint}</p>
+    ${mineSat ? `<div class="done">✓ 내 글을 올렸어요 — “${esc(mineSat.content)}”</div>` : `
+    <div class="compose">
+      <div class="row">
+        <input type="text" id="in-${t.id}" maxlength="40" placeholder="${t.placeholder}"
+               autocomplete="off">
+        <button class="go" data-post="${t.id}" style="background:${t.css}">올리기</button>
+      </div>
+      <p class="lede" style="margin:0">한 주제에 한 번만 올릴 수 있어요.</p>
+    </div>`}
+    <div class="cards">${
+      list.length ? list.map(s => card(s, t)).join("")
+                  : '<p class="empty">아직 올라온 글이 없어요. 먼저 올려볼까요?</p>'}</div>`;
+}
+
+/* 단소 도움 — 위성은 '도와준 친구 이름', 버튼을 누르면 그 친구가 도와준 횟수가 하나 는다 */
+function counterPane(list, t){
+  return `
+    <h2 style="color:${t.css}">${t.title}</h2>
+    <p class="lede">${t.hint}</p>
+    <div class="grid">${ROSTER.map(name => {
+      const sat = list.find(s => s.student === name);
+      const count = sat ? likes(sat).length : 0;
+      const already = !!sat && sat.acts.some(a => a.id === actId(sat.id, me.uid, "like"));
+      // sat.uid 는 그 친구의 위성을 '처음 만든 사람'일 뿐 본인이 아닐 수 있어
+      // 자기 자신인지는 이름(표시 이름)으로만 판단한다
+      const isSelf = name === (me.displayName || me.email);
+      return `<button data-help="${esc(name)}" ${isSelf || already ? "disabled" : ""}
+                class="${count ? "has" : ""}">${esc(name)}<span>${count ? count + "회" : "—"}</span></button>`;
+    }).join("")}</div>`;
 }
 
 function card(s, t){
@@ -244,6 +265,12 @@ document.addEventListener("click", async e => {
     if (!v){ toast("댓글 내용을 써 주세요"); return; }
     await run(() => addInteraction({ satelliteId:s.id, topicId:s.topic, user:me,
                                      type:"comment", text:v }), "댓글을 남겼어요!");
+    return;
+  }
+  const help = e.target.closest("[data-help]");
+  if (help){
+    const name = help.dataset.help;
+    await run(() => creditHelper({ studentName:name, user:me }), `${name}에게 고마움을 전했어요!`);
     return;
   }
 });

@@ -59,6 +59,21 @@ export async function postSatellite({ topicId, user, content }){
   return id;
 }
 
+/* 단소 도움 — 위성은 '도와준 학생 이름'으로 정해진다(글쓴이 uid가 아니라).
+   그래서 누구든 처음 누르는 사람이 그 친구의 위성을 만들 수 있고,
+   이미 있으면 만들기가 조용히 실패하니 무시하고 상호작용만 남긴다. */
+export async function creditHelper({ studentName, user }){
+  const id = satId("t3", studentName);
+  try {
+    await setDoc(doc(db, "satellites", id), {
+      topicId: "t3", uid: user.uid, studentName, content: "0", createdAt: serverTimestamp(),
+    });
+  } catch (e) {
+    if (e.code !== "permission-denied") throw e;
+  }
+  return addInteraction({ satelliteId: id, topicId: "t3", user, type: "like" });
+}
+
 /* 공감 · 댓글 — 같은 글에 같은 종류는 한 번만 */
 export async function addInteraction({ satelliteId, topicId, user, type, text }){
   const id = actId(satelliteId, user.uid, type);

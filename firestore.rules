@@ -26,18 +26,26 @@ service cloud.firestore {
       return v is string && v.size() > 0 && v.size() <= maxLen;
     }
 
-    /* 글 — 로그인한 사람은 모두 읽는다. 쓰기는 본인 것만, 한 주제에 하나. */
+    /* 글 — 로그인한 사람은 모두 읽는다. 쓰기는 본인 것만, 한 주제에 하나.
+       ★ 단소 도움(t3)만 예외 — 위성이 '글쓴이'가 아니라 '도와준 친구 이름'이라
+         처음 누르는 사람이 그 친구의 위성을 만들 수 있어야 한다. */
     match /satellites/{satId} {
       allow read: if signedIn();
 
       allow create: if signedIn()
         && request.resource.data.uid == uid()
-        && satId == request.resource.data.topicId + "__" + uid()
         && request.resource.data.topicId is string
         && okText(request.resource.data.content, 40)
         && okText(request.resource.data.studentName, 30)
         && request.resource.data.keys().hasOnly(
-             ["topicId","uid","studentName","content","createdAt"]);
+             ["topicId","uid","studentName","content","createdAt"])
+        && (
+             (request.resource.data.topicId != "t3"
+               && satId == request.resource.data.topicId + "__" + uid())
+             ||
+             (request.resource.data.topicId == "t3"
+               && satId == "t3__" + request.resource.data.studentName)
+           );
 
       // 수정은 아무도 못 한다. 지우는 건 교사만.
       allow update: if false;
