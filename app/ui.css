@@ -4,7 +4,7 @@
   --line:#C0C0C0; --line-2:#B0B0B0;
   --ink:#111111; --ink2:#333333; --ink3:#555555;
   --t1:#E8604F; --t2:#3D9AE0; --t3:#A276E8;
-  --ok:#4FCFA0; --warn:#FFC46B; --bad:#FF8FA6;
+  --ok:#158F66; --warn:#B4650A; --bad:#C2314B;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
