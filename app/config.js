@@ -7,12 +7,13 @@
    실제 접근 통제는 firestore.rules 가 합니다. 규칙을 꼭 배포하세요.
    ─────────────────────────────────────────────────────────── */
 export const firebaseConfig = {
-  apiKey:            "여기에-붙여넣기",
-  authDomain:        "여기에-붙여넣기.firebaseapp.com",
-  projectId:         "여기에-붙여넣기",
-  storageBucket:     "여기에-붙여넣기.appspot.com",
-  messagingSenderId: "여기에-붙여넣기",
-  appId:             "여기에-붙여넣기",
+  apiKey: "AIzaSyA4jBNQn1wfSbbwWpVI1yO6UtY8PdGWFiE",
+  authDomain: "universe-15a3c.firebaseapp.com",
+  projectId: "universe-15a3c",
+  storageBucket: "universe-15a3c.firebasestorage.app",
+  messagingSenderId: "102242303374",
+  appId: "1:102242303374:web:b97b821e157821c175f8df"
+
 };
 
 /* ② 교사 계정.
