@@ -990,6 +990,7 @@ function cardHTML(s, t){
         ${liked ? "공감함" : "공감"}</button>
       <button data-open="${s.id}" ${noted || own ? "disabled" : ""}>
         ${noted ? "댓글 남김" : "댓글 쓰기"}</button>
+      <button data-act="del" data-id="${s.id}" ${own ? "" : "disabled"}>삭제</button>
     </div>
     <div class="cbox" id="cb-${s.id}" hidden>
       <input type="text" id="ci-${s.id}" maxlength="40" placeholder="댓글을 한 줄로 써 주세요">
@@ -1022,8 +1023,16 @@ document.addEventListener("click", e => {
     return;
   }
   const act = e.target.closest("[data-act]");
-  if (act){                                   // 공감 — 숨은 별이 하나 늘어난다
+  if (act){                                   // 공감 또는 삭제
     const sa = satById(act.dataset.id); if (!sa) return;
+    if (act.dataset.act === "del") {
+      // 삭제: 자신이 만든 글만 삭제 허용 (버튼이 disabled 처리되어 있음)
+      sats = sats.filter(s => s.id !== sa.id);
+      buildSats(); clearSuns(); renderPanes(); stats();
+      toast(`${sa.student}의 글이 삭제되었습니다`);
+      return;
+    }
+    // 기존 공감 로직
     sa.acts.push({ from: me, type: "like" });
     buildSats(); clearSuns(); renderPanes(); stats();
     toast(`${sa.student}의 위성 주변에 숨은 별이 하나 생겼어요`);
