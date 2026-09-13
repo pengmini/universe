@@ -62,8 +62,20 @@ export async function settleRedirect(){
 
 /* 페이지 가드.
    need: "teacher" | "student" | null(로그인만 확인)
-   역할이 맞지 않으면 제 페이지로 돌려보낸다. */
+   역할이 맞지 않으면 제 페이지로 돌려보낸다.
+
+   ★ 시연용 우회 — 주소에 ?demo=1 이 붙어 있으면 로그인 없이 바로 통과시킨다.
+     실제 Firebase 로그인이 없으므로 Firestore 읽기·쓰기는 다 막힌다(권한 없음).
+     교사 화면은 [예시 데이터] 버튼으로 대신 보여주면 된다. 시연 끝나면
+     index.html 의 데모 버튼만 지우면 이 우회로도 같이 안 쓰이게 된다. */
 export function guard(need, onReady){
+  if (new URLSearchParams(location.search).get("demo") === "1"){
+    const demoUser = need === "teacher"
+      ? { uid: "demo-teacher", displayName: "시연(교사)", email: TEACHER_EMAIL }
+      : { uid: "demo-student", displayName: "시연(학생)", email: "" };
+    onReady(demoUser, need || "student");
+    return () => {};
+  }
   return onAuthStateChanged(auth, user => {
     if (!user){ location.replace("./index.html"); return; }
     const role = roleOf(user);
