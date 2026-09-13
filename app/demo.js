@@ -1,0 +1,45 @@
+/* 시연용 예시 데이터.
+   Firestore 에 쓰지 않습니다. 교사 화면에서 버튼으로 켤 때만 메모리에 얹힙니다.
+
+   ★ 실제 데이터와 섞이지 않도록 _demo:true 로 표시하고,
+     집계·숨은 태양 후보·「참여 적은 친구」 명단에서는 제외합니다.
+   ★ 이미 실제 글이 올라온 주제에는 예시가 붙지 않습니다.
+
+   더 이상 필요 없어지면 이 파일과 teacher.html 의 import 한 줄만 지우면 됩니다. */
+
+const D = (topic, student, content, froms, type = "like", texts = []) => ({
+  id: `demo_${topic}_${student}`,
+  topic, student, uid: `demo_${student}`, content, _demo: true,
+  acts: froms.map((f, i) => ({
+    id: `demo_${topic}_${student}_${f}`,
+    from: f,
+    type: texts[i] ? "comment" : type,
+    text: texts[i] || "",
+  })),
+});
+
+export const DEMO = [
+  /* 전통놀이 */
+  D("t1", "민준", "딱지치기", ["서연","지우","하윤","예준"], "like", ["", "나도 그거 좋아해!", "", "같이 하자"]),
+  D("t1", "서연", "제기차기", ["민준","수아","건우"]),
+  D("t1", "채원", "고무줄놀이", ["하윤","다은"], "like", ["어릴 때 많이 했었는데", ""]),
+  D("t1", "현우", "투호던지기", ["지호"]),
+
+  /* 음악 취향 */
+  D("t2", "시우", "존박", ["하은","지안","윤서"], "like", ["", "나도 들어봤어", ""]),
+  D("t2", "하은", "아이유", ["시우","유진","준서","소율"]),
+  D("t2", "지안", "피아노 연주곡", ["나윤"], "like", ["쉬는 시간에 알려줘"]),
+
+  /* 단소 도움 — 위성이 '도움을 준 친구', 주변 별이 '도움을 받은 친구' */
+  D("t3", "서준", "5", ["민준","서연","지우","하윤","도윤"], "help"),
+  D("t3", "아린", "3", ["예준","시우","하은"], "help"),
+  D("t3", "윤서", "2", ["지호","수아"], "help"),
+  D("t3", "태윤", "1", ["지안"], "help"),
+];
+
+/* 실제 글이 하나도 없는 주제에만 예시를 얹는다 */
+export function withDemo(real, on){
+  if (!on) return real;
+  const busy = new Set(real.map(s => s.topic));
+  return [...real, ...DEMO.filter(d => !busy.has(d.topic))];
+}
