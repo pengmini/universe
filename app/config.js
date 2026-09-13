@@ -7,12 +7,12 @@
    실제 접근 통제는 firestore.rules 가 합니다. 규칙을 꼭 배포하세요.
    ─────────────────────────────────────────────────────────── */
 export const firebaseConfig = {
-  apiKey:            "여기에-붙여넣기",
-  authDomain:        "여기에-붙여넣기.firebaseapp.com",
-  projectId:         "여기에-붙여넣기",
-  storageBucket:     "여기에-붙여넣기.appspot.com",
-  messagingSenderId: "여기에-붙여넣기",
-  appId:             "여기에-붙여넣기",
+  apiKey: "AIzaSyA4jBNQn1wfSbbwWpVI1yO6UtY8PdGWFiE",
+  authDomain: "universe-15a3c.firebaseapp.com",
+  projectId: "universe-15a3c",
+  storageBucket: "universe-15a3c.firebasestorage.app",
+  messagingSenderId: "102242303374",
+  appId: "1:102242303374:web:b97b821e157821c175f8df"
 };
 
 /* ② 교사 계정.
@@ -24,14 +24,20 @@ export const TEACHER_EMAIL = "pengmini90@gmail.com";
 /* ③ 주제 정의. 프로토타입이라 코드에 둡니다(사용자 데이터가 아니라 설정값).
    active:false 인 주제는 학생 화면에 나오지 않습니다. */
 export const TOPICS = [
-  { id:"t1", title:"전통놀이 종류 제안", short:"전통놀이", active:true, type:"board",
-    hint:"우리가 해보고 싶은 전통놀이를 올려요", placeholder:"예) 딱지치기",
-    css:"#E8604F", mix:["#5A1A22","#E8604F","#F0A03C","#C0304E"] },
-  { id:"t2", title:"음악 취향 인터뷰", short:"음악 취향", active:true, type:"board",
-    hint:"요즘 즐겨 듣는 음악을 알려줘요", placeholder:"예) 아이유",
-    css:"#3D9AE0", mix:["#0E2B48","#3D9AE0","#45C8C0","#2A5FAE"] },
-  // 단소는 다음 단계에서 작업합니다. 구조만 남겨 두고 학생 화면에는 띄우지 않습니다.
-  { id:"t3", title:"단소 도움 횟수", short:"단소 도움", active:false, type:"counter",
-    hint:"(다음 단계에서 작업)", placeholder:"",
-    css:"#A276E8", mix:["#241442","#A276E8","#D46FC8","#6A4BBF"] },
+  {
+    id: "t1", title: "전통놀이 종류 제안", short: "전통놀이", active: true, type: "board",
+    hint: "우리가 해보고 싶은 전통놀이를 올려요", placeholder: "예) 딱지치기",
+    css: "#E8604F", mix: ["#5A1A22", "#E8604F", "#F0A03C", "#C0304E"]
+  },
+  {
+    id: "t2", title: "음악 취향 인터뷰", short: "음악 취향", active: true, type: "board",
+    hint: "요즘 즐겨 듣는 음악을 알려줘요", placeholder: "예) 아이유",
+    css: "#3D9AE0", mix: ["#0E2B48", "#3D9AE0", "#45C8C0", "#2A5FAE"]
+  },
+  {
+    id: "t3", title: "단소 도움 횟수", short: "단소 도움", active: true, type: "counter",
+    hint: "단소를 연습할 때 친구를 도와준 적이 있나요? 도와준 순간을 한 줄로 남겨요",
+    placeholder: "예) 짝꿍에게 운지법을 알려줬어요",
+    css: "#A276E8", mix: ["#241442", "#A276E8", "#D46FC8", "#6A4BBF"]
+  },
 ];
