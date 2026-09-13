@@ -5,11 +5,6 @@
   --ink:#111111; --ink2:#333333; --ink3:#555555;
   --t1:#E8604F; --t2:#3D9AE0; --t3:#A276E8;
   --ok:#4FCFA0; --warn:#FFC46B; --bad:#FF8FA6;
-  --void:#05070F; --deep:#0A0F1E; --panel:#101729; --sunk:#0C1322;
-  --line:#1D2942; --line-2:#141E33;
-  --ink:#F4F7FD; --ink2:#C6D2E6; --ink3:#93A2BE;
-  --t1:#E8604F; --t2:#3D9AE0; --t3:#A276E8;
-  --ok:#4FCFA0; --warn:#FFC46B; --bad:#FF8FA6;
 }
 *{box-sizing:border-box}
 html,body{height:100%}

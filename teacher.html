@@ -331,6 +331,17 @@ const nLike = sa => sa.acts.filter(a => a.type !== "comment").length;   // 별�
 const nNote = sa => sa.acts.filter(a => a.type === "comment").length;
 const satById = id => sats.find(s => s.id === id);
 
+/* 부호 없는 32비트 해시 — 위성·댓글의 궤도(반지름·기울기·속도)를 id에서 결정론적으로 뽑는다.
+   ★ 주의: JS의 >> 는 '부호 있는' 시프트라 31번 비트가 켜진 값에서 음수가 나오고,
+     음수 % n 도 음수가 된다. 그러면 궤도 속도가 0 근처로 상쇄돼 '공전하지 않는' 천체가
+     생긴다. 아래는 전부 >>> 로 뽑는다. */
+function hashStr(str){
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+}
+const bits = (h, sh, mod) => (h >>> sh) % mod;   // 항상 0 이상
+
 /* ═══════════ 3D 우주 ═══════════ */
 const cv = $("gl");
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
