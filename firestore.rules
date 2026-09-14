@@ -1,6 +1,6 @@
 rules_version = '2';
 
-/* 소통의 우주 — Firestore 보안 규칙
+/* 모든 별 뜨는 시간 따로 있지 — Firestore 보안 규칙
 
    핵심 두 가지
    ① 교사 판정은 여기서만 한다. 클라이언트의 TEACHER_EMAIL 은 화면 이동용일 뿐이다.
